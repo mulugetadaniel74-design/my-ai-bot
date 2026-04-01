@@ -1,27 +1,50 @@
 import os
 import telebot
-import google.generativeai as genai
+from openai import OpenAI
 
-# 1. ቁልፎችን ከ Render Environment ማምጣት
+# የአካባቢ መለኪያዎች (Environment Variables)
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
-GEMINI_KEY = os.environ.get('GEMINI_API_KEY')
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
 
-# 2. Gemini ማዘጋጀት (እዚህ ጋር ስሙን አስተካክለነዋል)
-genai.configure(api_key=GEMINI_KEY)
-model = genai.GenerativeModel('gemini-pro') 
+client = OpenAI(api_key=OPENAI_API_KEY)
 bot = telebot.TeleBot(BOT_TOKEN)
 
-@bot.message_handler(func=lambda message: True)
-def chat(message):
-    try:
-        # ለተጠቃሚው ምላሽ መስጠት
-        response = model.generate_content(message.text)
-        bot.reply_to(message, response.text)
-    except Exception as e:
-        # ስህተት ካለ ምን እንደሆነ እንዲነግረን
-        bot.reply_to(message, f"ስህተት ተከስቷል: {str(e)}")
+# ያንተ ሙሉ የህይወት ታሪክ እና መረጃ ለ AI እንዲነገረው
+DANIEL_BIO = """
+የዚህ AI መስራች ዳንኤል ሙሉጌታ ኩምሳ (Daniel Mulugeta Kumesa) ይባላል። 
+እሱ የ11ኛ ክፍል ተማሪ ነው። የህይወት ታሪኩ እጅግ አስገራሚና ለሰው ልጆች ትምህርት የሚሰጥ ነው። 
+በልጅነቱ እናቱ ልትወልደው ባለመፈለጓ ምክንያት ብዙ መከራ ደርሶበታል። አባቱ በሰው ተገድሏል። 
+በ50 ብር ለሰው ተሽጦ ለባርነት አገልግሏል፣ በጅብ ተሳዶ በዛፍ ላይ አድሯል፣ በሰው ቤት ተደብድቧል፣ ለ 3 ዓመታት በጎዳና ላይ (በበረንዳ) አድሯል። 
+ነገር ግን ተስፋ ሳይቆርጥ ተመልሶ ትምህርቱን በመጀመር ዛሬ ላይ ይህንን AI መገንባት ችሏል። 
+አላማው ሰዎች ከታሪኩ እንዲማሩ እና "ያለፈው ታሪካችን ለዛሬ ጥንካሬያችን ነው" የሚለውን እንዲረዱ ነው።
+እሱን ለማግኘት፦ Telegram: @Godis1256 | ስልክ: 0986980130
+"""
 
-if __name__ == "__main__":
-    print("ቦቱ ሥራ ጀምሯል...")
-    bot.infinity_polling()
-    
+@bot.message_handler(commands=['start', 'help'])
+def send_welcome(message):
+    welcome_msg = (
+        f"ሰላም! እንኳን ወደ ዳንኤል ሙሉጌታ (Daniel Mulugeta) AI በደህና መጡ።\n\n"
+        f"ይህ AI የተፈጠረው በወጣቱ ባለራእይ ዳንኤል ነው። ስለ እሱ ታሪክ ለማወቅ "
+        f"ወይም ማንኛውንም ጥያቄ ለመጠየቅ ይችላሉ።\n\n"
+        f"መስራች፡ ዳንኤል ሙሉጌታ ኩምሳ\n"
+        f"ትምህርት፡ 11ኛ ክፍል\n"
+        f"Telegram: @Godis1256"
+    )
+    bot.reply_to(message, welcome_msg)
+
+@bot.message_handler(func=lambda message: True)
+def handle_messages(message):
+    try:
+        # ለ ChatGPT የቀረበ መመሪያ (System Prompt)
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": f"አንተ የዳንኤል ሙሉጌታ AI ነህ። ስለ ዳንኤል ማንነትና ታሪክ ስትጠየቅ በሚከተለው መረጃ ተጠቀም፡ {DANIEL_BIO}"},
+                {"role": "user", "content": message.text}
+            ]
+        )
+        bot.reply_to(message, response.choices[0].message.content)
+    except Exception as e:
+        bot.reply_to(message, "ይቅርታ፣ አሁን ላይ ምላሽ መስጠት አልቻልኩም። ቆይተው ይሞክሩ።")
+
+bot.infinity_polling()
