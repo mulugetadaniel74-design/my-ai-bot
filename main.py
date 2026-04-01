@@ -9,7 +9,7 @@ OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
 client = OpenAI(api_key=OPENAI_API_KEY)
 bot = telebot.TeleBot(BOT_TOKEN)
 
-# ያንተ ሙሉ የህይወት ታሪክ እና መረጃ ለ AI እንዲነገረው
+# የዳንኤል ሙሉ የህይወት ታሪክ ለ AI እንዲነገረው
 DANIEL_BIO = """
 የዚህ AI መስራች ዳንኤል ሙሉጌታ ኩምሳ (Daniel Mulugeta Kumesa) ይባላል። 
 እሱ የ11ኛ ክፍል ተማሪ ነው። የህይወት ታሪኩ እጅግ አስገራሚና ለሰው ልጆች ትምህርት የሚሰጥ ነው። 
@@ -35,7 +35,6 @@ def send_welcome(message):
 @bot.message_handler(func=lambda message: True)
 def handle_messages(message):
     try:
-        # ለ ChatGPT የቀረበ መመሪያ (System Prompt)
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
@@ -45,6 +44,9 @@ def handle_messages(message):
         )
         bot.reply_to(message, response.choices[0].message.content)
     except Exception as e:
-        bot.reply_to(message, "ይቅርታ፣ አሁን ላይ ምላሽ መስጠት አልቻልኩም። ቆይተው ይሞክሩ።")
+        bot.reply_to(message, "ይቅርታ ስህተት ተፈጥሯል። Render ላይ OPENAI_API_KEY መኖሩን አረጋግጥ።")
 
-bot.infinity_polling()
+if __name__ == "__main__":
+    bot.remove_webhook()
+    bot.infinity_polling(skip_pending=True)
+    
