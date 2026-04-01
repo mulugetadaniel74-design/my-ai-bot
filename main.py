@@ -1,62 +1,41 @@
 import os
 import telebot
-from openai import OpenAI
+import google.generativeai as genai
 
-# ያንተ መረጃዎች (እዚህ ጋር በቀጥታ አስገብቼልሃለሁ)
+# Token እና Key (ከ Render Environment Variables ይነበባሉ)
 BOT_TOKEN = "8643065828:AAGaXS158SdOZJoLsJxrOpCs1iEsmup6XKM"
-# OpenAI API Key ካለህ እዚህ አስገባ፣ ከሌለህ Render Environment ላይ OPENAI_API_KEY ብለህ አስገባ
-OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+GEMINI_API_KEY = "AIzaSyBMv6RUQJQSYbpRxKdAXW9DzmhEJ1DdnNk"
 
-client = OpenAI(api_key=OPENAI_API_KEY)
+# Gemini ማዘጋጃ
+genai.configure(api_key=GEMINI_API_KEY)
+model = genai.GenerativeModel('gemini-pro')
+
 bot = telebot.TeleBot(BOT_TOKEN)
 
-# የዳንኤል ሙሉ የህይወት ታሪክ እና ማንነት ለ AI መመሪያ
+# የዳንኤል ታሪክ መመሪያ (System Instruction)
 DANIEL_BIO = """
 አንተ የዳንኤል ሙሉጌታ ኩምሳ (Daniel Mulugeta Kumesa) AI ነህ። 
-ዳንኤል የዚህ AI መስራችና ባለቤት ነው። እሱ በኢትዮጵያ አዲስ አበባ የሚኖር የ11ኛ ክፍል የማህበራዊ ሳይንስ (Social Science) ተማሪ ነው። 
-የህይወት ታሪኩ እጅግ አሳዛኝና ለሰው ልጆች ትምህርት የሚሰጥ ነው፦
-- እናቱ ልትወልደው ስላልፈለገች መድኃኒት ውጣ ነበር፣ ነገር ግን ተረፈ።
-- አባቱ በሰው ተገደለ።
-- እናቱ በ50 ብር ለባርነት ሸጠችው። በሰው ቤት ብዙ ድብደባና መከራ አየ።
-- በ7 ዓመቱ ጅብ ሊበላው ሲል ዛፍ ላይ ወጥቶ ተርፏል።
-- አክስቱ ጋር እያለ በረንዳ ላይ እንዲያድር ተደርጓል፣ ለ3 ዓመታት በጎዳና ላይ (መዳበሪያ ውስጥ ተኝቶ) አሳልፏል።
-- ይህ ሁሉ ሆኖ ግን ተስፋ ሳይቆርጥ ትምህርቱን ቀጥሎ ዛሬ ላይ ይህን AI ሰርቷል።
-- 'ለምን ትኖራለህ?' (Why do you live?) የሚል የፍልስፍና መጽሐፍ እየጻፈ ይገኛል።
-- የቅርብ ጓደኛው መኳንንት (Mekuanint) ይባላል።
-እሱን ለማግኘት፦ Telegram: @Godis1256 | ስልክ: 0986980130
+ዳንኤል የ11ኛ ክፍል የማህበራዊ ሳይንስ ተማሪ ነው። 
+ታሪኩ፦ በልጅነቱ በ50 ብር ለባርነት ተሽጧል፣ በረንዳ ላይ አድሯል፣ ጅብ ሊበላው ሲል ተርፏል። 
+ይህ ሁሉ መከራ አልፎ ዛሬ ይህን AI ሰርቷል። 'ለምን ትኖራለህ?' የሚል መጽሐፍ እየጻፈ ነው። 
+ሁልጊዜ ስትመልስ በታላቅ አክብሮት እና የሱን የጽናት ታሪክ በሚያሳይ መልኩ ይሁን።
 """
 
-@bot.message_handler(commands=['start', 'help'])
+@bot.message_handler(commands=['start'])
 def send_welcome(message):
-    welcome_text = (
-        "ሰላም! እንኳን ወደ ዳንኤል ሙሉጌታ (Daniel Mulugeta) AI በደህና መጡ።\n\n"
-        "ይህ AI የተፈጠረው በወጣቱ ባለራእይ ዳንኤል ነው። እሱ የ11ኛ ክፍል ተማሪ ሲሆን "
-        "ብዙ የህይወት ፈተናዎችን በጽናት አልፎ ዛሬ ላይ ይህን ቴክኖሎጂ አቅርቧል።\n\n"
-        "ስለ ዳንኤል ማንነትና ታሪክ መጠየቅ ይችላሉ።\n\n"
-        "መስራች፡ ዳንኤል ሙሉጌታ ኩምሳ\n"
-        "Telegram: @Godis1256"
-    )
-    bot.reply_to(message, welcome_text)
+    bot.reply_to(message, "ሰላም! የዳንኤል AI ዝግጁ ነው። ማንኛውንም ጥያቄ ይጠይቁኝ።")
 
 @bot.message_handler(func=lambda message: True)
 def handle_messages(message):
     try:
-        if not OPENAI_API_KEY:
-            bot.reply_to(message, "እባክህ Render ላይ OPENAI_API_KEY ማስገባትህን አረጋግጥ።")
-            return
-
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": DANIEL_BIO},
-                {"role": "user", "content": message.text}
-            ]
-        )
-        bot.reply_to(message, response.choices[0].message.content)
+        # Gemini ምላሽ እንዲሰጥ ማድረግ
+        full_prompt = f"{DANIEL_BIO}\n\nተጠቃሚው እንዲህ ይላል፦ {message.text}"
+        response = model.generate_content(full_prompt)
+        bot.reply_to(message, response.text)
     except Exception as e:
-        bot.reply_to(message, "ይቅርታ፣ አሁን ላይ ምላሽ መስጠት አልቻልኩም።")
+        bot.reply_to(message, "ይቅርታ፣ ትንሽ መቆራረጥ ተፈጥሯል። እባክህ ድጋሚ ሞክር።")
 
 if __name__ == "__main__":
-    bot.remove_webhook()
-    bot.infinity_polling(skip_pending=True)
+    print("Gemini Bot እየሰራ ነው...")
+    bot.infinity_polling()
     
