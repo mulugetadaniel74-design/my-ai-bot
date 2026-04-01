@@ -1,4 +1,3 @@
-import os
 import telebot
 from groq import Groq
 
