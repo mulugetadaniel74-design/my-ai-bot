@@ -24,4 +24,4 @@ def chat(message):
 if __name__ == "__main__":
     print("ቦቱ እየተነሳ ነው...")
     bot.infinity_polling()
-    
+
