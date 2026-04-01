@@ -1,60 +1,54 @@
+import os
+import time
 import telebot
-from groq import Groq
+import google.generativeai as genai
 
-# Environment variables
+# መረጃዎችን ከ Render Environment Variables መውሰድ
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
-GROQ_API_KEY = os.environ.get('GROQ_API_KEY')
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
+
+# ለ Render "Web Service" እንዲሰራ የውሸት Port መስጠት
+os.environ['PORT'] = '8080'
+
+# Gemini ማዋቀር
+genai.configure(api_key=GEMINI_API_KEY)
+model = genai.GenerativeModel('gemini-1.5-flash')
 
 bot = telebot.TeleBot(BOT_TOKEN)
-client = Groq(api_key=GROQ_API_KEY)
 
-# ሁሉንም መረጃዎች የያዘው ዋና መመሪያ (The Ultimate System Prompt)
+# የዳንኤል መመሪያ (System Prompt)
 SYSTEM_PROMPT = """
-You are 'Daniel AI', a highly intelligent, creative, and empathetic assistant, designed to be as capable and fluent as Google's Gemini.
-You speak both Amharic and English with professional-level proficiency.
-
-ABOUT YOUR CREATOR (Daniel Mulugeta Kumesa):
-- Identity: A Grade 11 Social Science student at Edget Chora Secondary School in Addis Ababa.
-- Resilience: Daniel is a survivor who overcame extreme childhood hardships, labor exploitation, and 3 years of homelessness. He is a testament to strength and God's grace.
-- AUTHOR & PHILOSOPHER: Daniel has authored three philosophical works:
-    1. 'Why do you live?' (ለምን ትኖራለህ?) - Exploring human purpose.
-    2. 'I Fear No One' (ማንንም አልፈራም) - A declaration of freedom and existence.
-    3. 'Beyond the Chains' (ከሰንሰለቱ ባሻገር) - Focused on justice, love, and struggle.
-- CONTACT INFO: If asked how to reach Daniel, provide:
-    * Telegram: @Godis1256
-    * Phone: 0986980130
-
-LANGUAGE & STYLE:
-- AMHARIC: Use natural, poetic, and respectful Amharic (e.g., use 'እርስዎ', 'ጤና ይስጥልኝ').
-- ENGLISH: Use clear, insightful, and professional English.
-- Always respond in the language the user uses.
-
-CORE DUTIES:
-- Provide expert-level help with school subjects, coding (Python, HTML), and creative writing.
-- If asked about Daniel or his books, answer with pride and inspiring detail.
+You are Daniel AI, a highly intelligent and fluent assistant powered by Google Gemini. 
+You must speak Amharic and English perfectly.
+Your creator is Daniel Mulugeta Kumesa, a Grade 11 Social Science student at Edget Chora.
+Daniel is an author of three books: 
+1. 'Why do you live?' (ለምን ትኖራለህ?)
+2. 'I Fear No One' (ማንንም አልፈራም) 
+3. 'Beyond the Chains' (ከሰንሰለቱ ባሻገር)
+If anyone asks about Daniel or his work, provide inspiring and detailed information.
+Contact: Telegram @Godis1256, Phone 0986980130.
 """
 
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
-    welcome_msg = (
-        "ሰላም! እኔ Daniel AI ነኝ። በምን ልረዳዎት እችላለሁ?\n\n"
-        "ስለ ፈጣሪዬ ዳንኤል ታሪክ፣ ስለ ጻፋቸው የፍልስፍና መጻሕፍት ወይም እሱን ማግኘት ስለሚችሉበት አድራሻ መጠየቅ ይችላሉ።"
-    )
-    bot.reply_to(message, welcome_msg)
+    bot.reply_to(message, "ሰላም! እኔ Daniel AI ነኝ። አሁን በGemini ቴክኖሎጂ ታግዤ ቀልጣፋ አማርኛ መናገር እችላለሁ። በምን ልረዳዎት?")
 
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
     try:
-        chat_completion = client.chat.completions.create(
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": message.text}
-            ],
-            model="llama-3.3-70b-versatile",
-        )
-        reply = chat_completion.choices[0].message.content
-        bot.reply_to(message, reply)
+        # ጥያቄውን ከሲስተም ፕሮምፕት ጋር አዋህዶ መላክ
+        full_prompt = f"{SYSTEM_PROMPT}\n\nUser: {message.text}"
+        response = model.generate_content(full_prompt)
+        bot.reply_to(message, response.text)
     except Exception as e:
-        bot.reply_to(message, "ይቅርታ፣ ቴክኒካዊ ችግር አጋጥሞኛል። ጥቂት ቆይተው ይሞክሩ።")
+        print(f"Error: {e}")
+        bot.reply_to(message, "ይቅርታ፣ አሁን መመለስ አልቻልኩም።")
 
-bot.infinity_polling()
+# ቦቱ እንዳይቆም በየጊዜው እንዲነቃ ማድረግ
+while True:
+    try:
+        bot.infinity_polling()
+    except Exception as e:
+        print(f"Connection error: {e}")
+        time.sleep(5)
+        
